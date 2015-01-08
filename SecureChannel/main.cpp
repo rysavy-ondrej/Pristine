@@ -19,12 +19,5 @@
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <iostream>
-using namespace std;
-
-int main (int argc, char *argv[])
-{
-	cout << "Hello world!" << endl;
+#include <string.h>
 	
-	return 0;
-}
-

@@ -1,0 +1,14 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="SecureChannel/main.cpp">
+    <Files>
+      <File FileName="SecureChannel/main.cpp" Line="3" Column="3" />
+      <File FileName="SecureChannel/OpenSSL/Include/conf.h" Line="1" Column="1" />
+      <File FileName="Packages/include/openssl/evp.h" Line="16" Column="16" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>

@@ -9,11 +9,6 @@
     </Compiler>
     <Language>CPP</Language>
     <Target>Bin</Target>
-    <Packages>
-      <Packages>
-        <Package file="/usr/lib/pkgconfig/libcrypto.pc" name="OpenSSL-libcrypto" IsProject="False" />
-      </Packages>
-    </Packages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,8 +16,25 @@
     <Externalconsole>true</Externalconsole>
     <OutputName>SecureChannel</OutputName>
     <CompileTarget>Bin</CompileTarget>
-    <DefineSymbols>DEBUG MONODEVELOP</DefineSymbols>
+    <DefineSymbols>DEBUG MONODEVELOP DEPRECATED_IN_MAC_OS_X_VERSION_10_7_AND_LATER</DefineSymbols>
     <SourceDirectory>.</SourceDirectory>
+    <Libs>
+      <Libs>
+        <Lib>/Users/rysavy/Projects/Pristine/Packages/lib/libcrypto.a</Lib>
+      </Libs>
+    </Libs>
+    <ExtraCompilerArguments>-m32</ExtraCompilerArguments>
+    <ExtraLinkerArguments>-m32</ExtraLinkerArguments>
+    <Includes>
+      <Includes>
+        <Include>/Users/rysavy/Projects/Pristine/Packages/include</Include>
+      </Includes>
+    </Includes>
+    <LibPaths>
+      <LibPaths>
+        <LibPath>/Users/rysavy/Projects/Pristine/Packages/lib</LibPath>
+      </LibPaths>
+    </LibPaths>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release</OutputPath>
