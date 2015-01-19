@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <openssl/bio.h>
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -42,7 +43,11 @@ void handleErrors(void)
     abort();
 }
 
-int crypto_encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
+/*
+ * This function encrypts a plaintext using the given key and IV. It returns
+ * length of encrypted message. "ciphertext" contains encrypted text.
+ */
+int crypto_aes_256_cbc_encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
             unsigned char *iv, unsigned char *ciphertext)
 {
     EVP_CIPHER_CTX *ctx;
@@ -81,7 +86,7 @@ int crypto_encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *k
     return ciphertext_len;
 }
 
-int crypto_decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
+int crypto_aes_256_cbc_decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
             unsigned char *iv, unsigned char *plaintext)
 {
     EVP_CIPHER_CTX *ctx;
@@ -120,30 +125,90 @@ int crypto_decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char 
     return plaintext_len;
 }
 
+/*
+ * Function applies counter mode encryption using ECB mode cipher initialized in contex
+ * to encrypt/decrypt source buffer to target buffer. Array counter represents an initial counter value.
+ * 
+ * Note, that following should be satisfied:
+ * - to work securely, counter value must never be used twice for encrypting different data.
+ * - counter length must be equal to block size of the cipher used with the provided context.
+ *
+ * Parameters:
+ * ctx - cipher context, it should be initialized with ECB mode cipher
+ * source - a source buffer to encrypt
+ * target - a target buffer for storing encrypted data 
+ * length - a length of data to be encrypted
+ * counter - a block of data representing counter used in CTR mode
+ */
+int crypto_ctr_encrypt(EVP_CIPHER_CTX *ctx, unsigned char *source, unsigned char *target, int length, unsigned char *counter)
+{
+    // only ECB mode is supported!
+    if (EVP_CIPHER_CTX_mode(ctx) != EVP_CIPH_ECB_MODE)
+        return -1;
+    
+    int block_size = EVP_CIPHER_CTX_block_size(ctx);
+    unsigned char buffer[length+block_size];
+    int offset = 0;
+    // encrypt counter as many times as necessary
+    for (int i = 0; i <= length / block_size; i++)
+    {
+        int encbytes = 0;
+        EVP_EncryptUpdate(ctx, &buffer[offset], &encbytes, counter, block_size);
+        offset += encbytes;
+        // increment counter:
+        for (int j = 0; j < block_size / sizeof(unsigned char); j++)
+            if (++counter[j]) break;
+    }
+    // in buffer, we have encrypted counter ->  xor it with input to produce encrypted data
+    for(int i = 0; i <= length; i++)
+    {
+        target[i] = buffer[i] ^ source[i];
+    }
+    return length;
+}
+
 // Intialize stuff related to cryptolib.
-int crypto_init()
+void crypto_init()
 {
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
     OPENSSL_config(NULL);
 }
 
-int crypto_shutdown()
+void crypto_shutdown()
 {
     /* Clean up */
     EVP_cleanup();
     ERR_free_strings();
+    
 }
 
+
+/* Sending BIO pipeline */
+BIO *bio_send_source;
+BIO *bio_send_sink;
+BIO *bio_header_writer;
+BIO *bio_content_encryptor;
+BIO *bio_integrity_maker;
+/* Receiving BIO pipeline */
+
+
 int main(int argc, char **argv ) {
-	char ch;
+    int counter = 0;
+    char ch;
 	char buf[80];
-	char sendline[MAXLINE];
-    char templine[MAXLINE];
-	char recvline[MAXLINE];
+	unsigned char sendline[MAXLINE];
+    unsigned char templine[MAXLINE];
+	unsigned char recvline[MAXLINE];
     
     /* A 256 bit key */
-    unsigned char *key = "01234567890123456789012345678901";
+    unsigned char *key = (unsigned char*) "01234567890123456789012345678901";
+    
+    EVP_CIPHER_CTX *ctx;
+    if(!(ctx = EVP_CIPHER_CTX_new())) handleErrors();
+    
+    if(1 != EVP_EncryptInit_ex(ctx,  EVP_aes_256_ecb(), NULL, key, NULL))
+        handleErrors();
     
 	int udt;
 
@@ -187,33 +252,44 @@ int main(int argc, char **argv ) {
 	FD_SET(udt, &readfds);
 	FD_SET(STDIN_FILENO, &readfds);
 	while (select(udt+1, &readfds, NULL, NULL, NULL)) {
-		if (FD_ISSET(STDIN_FILENO, &readfds) && fgets(sendline, MAXLINE, stdin)>0) { // we have read a new line to send
-            // generate new IV:
-            RAND_bytes(templine, 16);
-            // or, which may be faster (?)
-            // RAND_pseudo_bytes(templine,16);
-            
+        // SEND:
+		if (FD_ISSET(STDIN_FILENO, &readfds) && fgets((char*)sendline, MAXLINE, stdin)>0) {
+
+            memcpy(templine+12, &counter, 4);
+            memcpy(templine+8,  &counter, 4);
+            memcpy(templine+4,  &counter, 4);
+            // least four bytes are used as 32-bit subcounter
+            memset(templine, 0, 4);
             // encrypt it:
-            int ciphertext_len = crypto_encrypt(sendline, strlen(sendline), key, templine, templine+16);
-			if (!udt_send(udt, remote_addr, remote_port, templine, ciphertext_len+16)) {
+            int ciphertext_len = crypto_ctr_encrypt(ctx, sendline, templine+16, strlen((char*)sendline), templine);
+            
+			if (!udt_send(udt, remote_addr, remote_port, templine+12, ciphertext_len+4)) {
 				perror("sechan: ");	// some error
 			}
+            counter++;
 		}
-		if (FD_ISSET(udt, &readfds)) {	// We have a new message to print
-			int recv_len = udt_recv(udt, recvline, MAXLINE, NULL, NULL);
+        // RECV:
+		if (FD_ISSET(udt, &readfds)) {
+            memset(recvline, 0, MAXLINE);
+			int recv_len = udt_recv(udt, recvline+12, MAXLINE, NULL, NULL);
+            // reset subcounter
+            memset(recvline, 0, 4);
+            // expand counter value
+            memcpy(recvline+4, recvline+12, 4);
+            memcpy(recvline+8, recvline+12, 4);
             
-            printf("Encrypted message is:\n");
-            BIO_dump_fp(stdout, recvline, recv_len);
+            printf("Received message is:\n");
+            BIO_dump_fp(stdout, (char*)recvline+12, recv_len);
             
             printf("Decrypted message is:\n");
             
             /* Decrypt the ciphertext */
-            int decryptedtext_len = crypto_decrypt(recvline+16, recv_len-16, key, recvline,templine);
+            int decryptedtext_len = crypto_ctr_encrypt(ctx, recvline+16, templine, recv_len-4, recvline);
             
             /* Add a NULL terminator. We are expecting printable text */
             templine[decryptedtext_len] = '\0';
 
-			fputs(templine, stdout);
+			fputs((char*)templine, stdout);
 		}
 		// and again!
 		FD_ZERO(&readfds);
@@ -222,6 +298,7 @@ int main(int argc, char **argv ) {
 	}
     
     crypto_shutdown();
+    EVP_CIPHER_CTX_free(ctx);
     
 	return EXIT_SUCCESS;
 }
