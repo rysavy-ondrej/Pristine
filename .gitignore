@@ -1,0 +1,10 @@
+
+SecureChannel/sechan
+
+SecureChannel/sechan.cfg
+
+*.o
+
+SecureChannel/udtproxy
+
+*.o
