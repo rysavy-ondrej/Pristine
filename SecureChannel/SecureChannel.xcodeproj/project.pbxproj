@@ -1,0 +1,288 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		3BC79B2F1A6F894E00822314 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3BC79B2E1A6F894E00822314 /* libcrypto.a */; };
+		3BC79B341A6F8C2400822314 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 3BC79B331A6F8C2400822314 /* main.c */; };
+		3BC79B351A6F8C3000822314 /* securechannel.c in Sources */ = {isa = PBXBuildFile; fileRef = 3BC79B2C1A6F88AE00822314 /* securechannel.c */; };
+		3BFC62011A6FF58E00088789 /* sc-des-md5.cfg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3BFC61FD1A6FF52B00088789 /* sc-des-md5.cfg */; };
+		3BFC62021A6FF58E00088789 /* sc-des-sha1.cfg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3BFC62001A6FF56300088789 /* sc-des-sha1.cfg */; };
+		3BFC62031A6FF58E00088789 /* sc-aes-md5.cfg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3BFC61FE1A6FF52B00088789 /* sc-aes-md5.cfg */; };
+		3BFC62041A6FF58E00088789 /* sc-aes-sha1.cfg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3BFC61FF1A6FF52B00088789 /* sc-aes-sha1.cfg */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3BC79B201A6F886500822314 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				3BFC62011A6FF58E00088789 /* sc-des-md5.cfg in CopyFiles */,
+				3BFC62021A6FF58E00088789 /* sc-des-sha1.cfg in CopyFiles */,
+				3BFC62031A6FF58E00088789 /* sc-aes-md5.cfg in CopyFiles */,
+				3BFC62041A6FF58E00088789 /* sc-aes-sha1.cfg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		3BC79B221A6F886500822314 /* SecureChannel */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SecureChannel; sourceTree = BUILT_PRODUCTS_DIR; };
+		3BC79B251A6F886500822314 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		3BC79B2C1A6F88AE00822314 /* securechannel.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = securechannel.c; sourceTree = SOURCE_ROOT; };
+		3BC79B2E1A6F894E00822314 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = ../Packages/lib/libcrypto.a; sourceTree = "<group>"; };
+		3BC79B331A6F8C2400822314 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		3BFC61FC1A6F8E1100088789 /* securechannel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = securechannel.h; sourceTree = SOURCE_ROOT; };
+		3BFC61FD1A6FF52B00088789 /* sc-des-md5.cfg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "sc-des-md5.cfg"; path = "Profiles/sc-des-md5.cfg"; sourceTree = "<group>"; };
+		3BFC61FE1A6FF52B00088789 /* sc-aes-md5.cfg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "sc-aes-md5.cfg"; path = "Profiles/sc-aes-md5.cfg"; sourceTree = "<group>"; };
+		3BFC61FF1A6FF52B00088789 /* sc-aes-sha1.cfg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "sc-aes-sha1.cfg"; path = "Profiles/sc-aes-sha1.cfg"; sourceTree = "<group>"; };
+		3BFC62001A6FF56300088789 /* sc-des-sha1.cfg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "sc-des-sha1.cfg"; path = "Profiles/sc-des-sha1.cfg"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3BC79B1F1A6F886500822314 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3BC79B2F1A6F894E00822314 /* libcrypto.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3BC79B191A6F886500822314 = {
+			isa = PBXGroup;
+			children = (
+				3BFC61FD1A6FF52B00088789 /* sc-des-md5.cfg */,
+				3BFC62001A6FF56300088789 /* sc-des-sha1.cfg */,
+				3BFC61FE1A6FF52B00088789 /* sc-aes-md5.cfg */,
+				3BFC61FF1A6FF52B00088789 /* sc-aes-sha1.cfg */,
+				3BC79B331A6F8C2400822314 /* main.c */,
+				3BC79B2E1A6F894E00822314 /* libcrypto.a */,
+				3BC79B241A6F886500822314 /* SecureChannel */,
+				3BC79B231A6F886500822314 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3BC79B231A6F886500822314 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3BC79B221A6F886500822314 /* SecureChannel */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3BC79B241A6F886500822314 /* SecureChannel */ = {
+			isa = PBXGroup;
+			children = (
+				3BC79B2C1A6F88AE00822314 /* securechannel.c */,
+				3BC79B251A6F886500822314 /* main.c */,
+				3BFC61FC1A6F8E1100088789 /* securechannel.h */,
+			);
+			path = SecureChannel;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3BC79B211A6F886500822314 /* SecureChannel */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3BC79B291A6F886500822314 /* Build configuration list for PBXNativeTarget "SecureChannel" */;
+			buildPhases = (
+				3BC79B1E1A6F886500822314 /* Sources */,
+				3BC79B1F1A6F886500822314 /* Frameworks */,
+				3BC79B201A6F886500822314 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SecureChannel;
+			productName = SecureChannel;
+			productReference = 3BC79B221A6F886500822314 /* SecureChannel */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3BC79B1A1A6F886500822314 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0610;
+				ORGANIZATIONNAME = "Brno University of Technology";
+				TargetAttributes = {
+					3BC79B211A6F886500822314 = {
+						CreatedOnToolsVersion = 6.1.1;
+					};
+				};
+			};
+			buildConfigurationList = 3BC79B1D1A6F886500822314 /* Build configuration list for PBXProject "SecureChannel" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 3BC79B191A6F886500822314;
+			productRefGroup = 3BC79B231A6F886500822314 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3BC79B211A6F886500822314 /* SecureChannel */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3BC79B1E1A6F886500822314 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3BC79B351A6F8C3000822314 /* securechannel.c in Sources */,
+				3BC79B341A6F8C2400822314 /* main.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3BC79B271A6F886500822314 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				VALID_ARCHS = i386;
+			};
+			name = Debug;
+		};
+		3BC79B281A6F886500822314 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				VALID_ARCHS = i386;
+			};
+			name = Release;
+		};
+		3BC79B2A1A6F886500822314 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/Users/rysavy/Projects/Pristine/Packages/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = /Users/rysavy/Projects/Pristine/Packages/include;
+				VALID_ARCHS = i386;
+			};
+			name = Debug;
+		};
+		3BC79B2B1A6F886500822314 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/Users/rysavy/Projects/Pristine/Packages/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = /Users/rysavy/Projects/Pristine/Packages/include;
+				VALID_ARCHS = i386;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3BC79B1D1A6F886500822314 /* Build configuration list for PBXProject "SecureChannel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3BC79B271A6F886500822314 /* Debug */,
+				3BC79B281A6F886500822314 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3BC79B291A6F886500822314 /* Build configuration list for PBXNativeTarget "SecureChannel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3BC79B2A1A6F886500822314 /* Debug */,
+				3BC79B2B1A6F886500822314 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3BC79B1A1A6F886500822314 /* Project object */;
+}
