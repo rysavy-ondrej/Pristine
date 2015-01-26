@@ -5,10 +5,7 @@
 # Copyright   : (c) Brno University of Technology
 # Description : Makefile for SecureChannel demo.
 #
-#               It makes two executable: udtdemo and idtproxy.
-#               sechan - Demostrates principles of a secure channel communication.
-#               udtproxy - Implements UDP proxy that can drop packets, 
-#                          reorded packets, and injects bit errors.
+#               It makes SecureChannel executable.
 #
 # Usage:        make [build] - for building the project 
 #               make clean   - for cleaning the projects immediate files and
@@ -16,19 +13,19 @@
 #
 #============================================================================
 CC=gcc
-CFLAGS=-c -Wall -I../Packages/include -m32
-LDFLAGS=-L../Packages/lib -lcrypto -m32
-SOURCES=sechan.c udtproxy.c
+CFLAGS=-c -Wall
+LDFLAGS=-lcrypto
+SOURCES=securechannel.c udtproxy.c main.c
 OBJECTS=$(SOURCES:.c=.o)
-EXECUTABLES=sechan udtproxy
+EXECUTABLES=SecureChannel udtproxy
 
 .PHONY: build
 .PHONY: clean
 
 all: ${SOURCES} ${EXECUTABLES}
 	
-sechan:  $(OBJECTS) 
-	${CC} ${LDFLAGS} -o sechan sechan.o
+SecureChannel:  $(OBJECTS)
+	${CC} ${LDFLAGS} -o SecureChannel SecureChannel.o main.o
 
 udtproxy:  $(OBJECTS) 
 	${CC} ${LDFLAGS} -o udtproxy udtproxy.o

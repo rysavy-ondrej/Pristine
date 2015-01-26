@@ -175,7 +175,7 @@ void SC_SDU_dump_fp(FILE*f, SC_CTX *ctx, SC_SDU *sdu)
         {
             int digest_size = EVP_MD_size(ctx->profile.mac_digest);
             int message_length = SC_SDU_message_length(ctx,sdu);
-            fprintf(f, "Sec=[sequence=%llu, epoch=%d]\n",sdu->content.secured.sequence_number,sdu->content.secured.context_epoch);
+            fprintf(f, "Sec=[sequence=%llu, epoch=%d]\n",sdu->content.secured.sequence_number,sdu->content.secured.context_index);
             fprintf(f, "Data (length=%d):\n",message_length);
             BIO_dump_fp(f, (char*)sdu->content.secured.fragment, message_length);
             fprintf(f, "HMAC (length=%d):\n", digest_size);

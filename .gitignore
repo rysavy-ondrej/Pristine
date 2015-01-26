@@ -8,3 +8,5 @@ SecureChannel/sechan.cfg
 SecureChannel/udtproxy
 
 *.o
+
+*.xcuserstate

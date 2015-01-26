@@ -147,7 +147,7 @@ int main(int argc, char **argv ) {
                 
                 SC_SDU *sdu = SC_SDU_allocate(SC_SDU_TYPE_SECURED, &sending_ctx, data_length);
                 sdu->content.secured.sequence_number = sdu_counter;
-                sdu->content.secured.context_epoch = 0;
+                sdu->content.secured.context_index = 0;
             
                 char counter_block [block_size];
                 SC_compute_counter(counter_block, block_size, &sending_ctx, sdu);
