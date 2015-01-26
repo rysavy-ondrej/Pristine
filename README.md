@@ -18,19 +18,22 @@ SecureChannel has following parameters:
 * -C configuration file
 
 To test communication try the following (note that you should run nodes in separate terminals as the process ends if input is eof):
-> $ ./SecureChannel -p 22222 -P 11111 -C sc-des-sha1.cfg 1> out
+```
+$ ./SecureChannel -p 22222 -P 11111 -C sc-des-sha1.cfg 1> out
 
-> $ ./SecureChannel -p 11111 -P 22222 -C sc-des-sha1.cfg < in
+$ ./SecureChannel -p 11111 -P 22222 -C sc-des-sha1.cfg < in
 
-> $ diff in out
-
+$ diff in out
+```
 Configuration file has the following format:
+```
+enc:<name of cipher for encoding including key size and mode>
+mac:<name of cipher to generate message digest>
+key:<key>
+```
+For example, example configuration file sc-aes-md5.cfg contains following:
+```
 enc:aes-256-ecb
 mac:md5
 key:01234567890123456789012345678901
-
-For example, example configuration file sc-aes-md5.cfg contains following:
-> enc:aes-256-ecb
-> mac:md5
-> key:01234567890123456789012345678901
-
+```
