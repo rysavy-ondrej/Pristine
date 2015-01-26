@@ -11,18 +11,15 @@ This project serves to develop Secure Channel as a part of RINA implementation.
 The idea is to use libcrypto from OpenSSL Project to implement secure channel that works both on reliable and unrealiable data delivery service.  This experimental implementation will use simplified underlaying DIF providing reliable delivery using TCP and unreliable delivery using UDP. The goal is to create a proof of concept implementation and analyze basic properties.
 
 
-Requirements
-------------
+### Requirements
 This project requires OpenSSL distribution to be installed on a host system. 
 
-Compilation
------------
+### Compilation
 To compile the project run make specifying which makefile to use. There are different makefiles depending target operating system:
 * Makefile.Linux - for Linux operating systems
 * Makefile.Apple - for Mac OS X platform, because OpenSSL though installed is marked as obsolete and cannot be used.
 
-Execution
----------
+### Execution
 Single executable file is generated calle SecureChannel. SecureChannel has following parameters:
 * p port        : local UDP socket binds to given `port'
 * P port        : UDP datagrams will be sent to the remote `port'
