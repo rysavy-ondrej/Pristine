@@ -34,7 +34,6 @@
 
 /* Begin PBXFileReference section */
 		3BC79B221A6F886500822314 /* SecureChannel */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SecureChannel; sourceTree = BUILT_PRODUCTS_DIR; };
-		3BC79B251A6F886500822314 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		3BC79B2C1A6F88AE00822314 /* securechannel.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = securechannel.c; sourceTree = SOURCE_ROOT; };
 		3BC79B2E1A6F894E00822314 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = ../Packages/lib/libcrypto.a; sourceTree = "<group>"; };
 		3BC79B331A6F8C2400822314 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
@@ -83,7 +82,6 @@
 			isa = PBXGroup;
 			children = (
 				3BC79B2C1A6F88AE00822314 /* securechannel.c */,
-				3BC79B251A6F886500822314 /* main.c */,
 				3BFC61FC1A6F8E1100088789 /* securechannel.h */,
 			);
 			path = SecureChannel;

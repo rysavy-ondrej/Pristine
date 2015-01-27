@@ -95,6 +95,7 @@ int main(int argc, char **argv ) {
     SC_initialize();
     
     SC_PROFILE profile;
+    memset(&profile, 0, sizeof(SC_PROFILE));
 
     if ((error_code = SC_PROFILE_load_and_validate(configFilename, &profile))!= S_OK)
     {
@@ -108,22 +109,29 @@ int main(int argc, char **argv ) {
         exit(EXIT_FAILURE);
     }
     //fprintf(stderr, "sizeof(SC_SDU_SECURED)=%d, sizeof(SC_SDU_HEADER)=%d, sizeof(SC_SDU)=%d, sizeof(SC_SDU_PLAIN)=%d\n", sizeof(SC_SDU_SECURED),sizeof(SC_SDU_HEADER),sizeof(SC_SDU),sizeof(SC_SDU_PLAIN));
-    
+    fprintf(stderr, "-- SECURE CHANNEL INFO --------------------------------------------------\n");
     fprintf(stderr, "Active profile:\n");
     SC_PROFILE_print(stderr, &profile);
     
     SC_CTX sending_ctx;
     SC_CTX receiving_ctx;
-    
-    SC_CTX_create(&sending_ctx,&profile);
-    SC_CTX_create(&receiving_ctx,&profile);
+   
+    SC_CTX_create(&sending_ctx,&profile,0, &flow_info.local_port, &flow_info.remote_port, sizeof(in_port_t));
+    SC_CTX_create(&receiving_ctx,&profile,0,&flow_info.remote_port, &flow_info.local_port, sizeof(in_port_t));
+    fprintf(stderr, "-------------------------------------------------------------------------\n");
+    fprintf(stderr, "Write context:\n");
+    SC_CTX_print(stderr, &sending_ctx);
+    fprintf(stderr, "-------------------------------------------------------------------------\n");
+    fprintf(stderr, "Read context:\n");
+    SC_CTX_print(stderr, &receiving_ctx);
     
     int udt = udt_init(flow_info.local_port);
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
     
     char buffer[80];
+    fprintf(stderr, "-------------------------------------------------------------------------\n");
     fprintf(stderr, "Data channel from localhost:%d to %s:%d.\n", ntohs(flow_info.local_port), inet_ntop(AF_INET, &flow_info.remote_address, buffer, 80), ntohs(flow_info.remote_port));
-    
+    fprintf(stderr, "=========================================================================\n");
     fd_set readfds;
     FD_ZERO(&readfds);
     FD_SET(udt, &readfds);
@@ -163,6 +171,7 @@ int main(int argc, char **argv ) {
                     perror(PROGRAM);
                 }
                 sdu_counter++;
+                SC_SDU_free(sdu);
             }
             if (feof(stdin)) break;
         }

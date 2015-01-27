@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <openssl/hmac.h>
+#include <openssl/sha.h>
 
 #include "securechannel.h"
 
@@ -43,8 +44,8 @@ int SC_PROFILE_load_and_validate(char *fname, SC_PROFILE *profile)
     char cipher_name[32], digest_name[32];
     
     
-    if (fscanf(f, "enc:%32s\nmac:%32s\nenckey:%32s\nseqkey:%32s\nmackey:%32s",
-               cipher_name,digest_name,profile->enckey,profile->seqkey,profile->mackey)!= 5)
+    if (fscanf(f, "enc:%32s\nmac:%32s\nkey:%32s",
+               cipher_name,digest_name,profile->key)!= 3)
     {   // error in parsing file config file
         fclose(f);
         return E_CANNOT_PARSE_PROFILE;
@@ -63,9 +64,19 @@ void SC_PROFILE_print(FILE *f, SC_PROFILE *profile)
 {
     fprintf(f, "enc:%s (keylen=%d, block size=%d)\n", EVP_CIPHER_name(profile->enc_cipher), EVP_CIPHER_key_length(profile->enc_cipher), EVP_CIPHER_block_size(profile->enc_cipher));
     fprintf(f, "mac:%s (len=%d)\n", EVP_MD_name(profile->mac_digest), EVP_MD_size(profile->mac_digest));
-    fprintf(f, "enckey:%s\n", profile->enckey);
-    fprintf(f, "seqkey:%s\n", profile->seqkey);
-    fprintf(f, "mackey:%s\n", profile->mackey);
+    fprintf(f, "key:%s\n", profile->key);
+}
+
+void SC_CTX_print(FILE *f, SC_CTX *ctx)
+{
+    int key_len =SC_CTX_key_length(ctx);
+    fprintf(f, "sci:%d\n", ctx->context_id);
+    fprintf(f, "enckey:\n");
+    BIO_dump_fp(f, ctx->enckey, key_len);
+    fprintf(f, "mackey:\n");
+    BIO_dump_fp(f, ctx->mackey, key_len);
+    fprintf(f, "seqkey:\n");
+    BIO_dump_fp(f, ctx->seqkey, key_len);
 }
 
 void handleErrors(void)
@@ -82,7 +93,7 @@ int SC_CTX_key_length(SC_CTX *ctx)
     return EVP_CIPHER_CTX_key_length(ctx->cipher_ctx);
 }
 
-int SC_CTX_create(SC_CTX *ctx, SC_PROFILE *profile)
+int SC_CTX_create(SC_CTX *ctx, SC_PROFILE *profile, int ctx_id, void *this_nonce, void *that_nonce, int nonce_length)
 {
     if(!(ctx->cipher_ctx = EVP_CIPHER_CTX_new()))
     {
@@ -95,7 +106,34 @@ int SC_CTX_create(SC_CTX *ctx, SC_PROFILE *profile)
         return E_FAIL;
     }
     
-    if(EVP_EncryptInit(ctx->cipher_ctx, profile->enc_cipher, (unsigned char*)profile->enckey, NULL) != 1)
+    // compute keys from master key:
+    // 1. compute seed key: K_seed = PRF(this_nonce || that_nonce, K_master)
+    // 2. use K_seed to compute write keys:
+    
+    char *nonce_buffer = malloc(nonce_length*2+sizeof(uint32_t));
+    memcpy(nonce_buffer, this_nonce, nonce_length);
+    memcpy(nonce_buffer+nonce_length, that_nonce, nonce_length);
+    memcpy(nonce_buffer+(2*nonce_length), &ctx_id, sizeof(uint32_t));
+    
+    char key_seed[EVP_MAX_MD_SIZE];
+    SC_expand_prf(EVP_sha256(), nonce_buffer, nonce_length*2, profile->key, EVP_CIPHER_key_length(profile->enc_cipher), key_seed, EVP_MAX_MD_SIZE);
+    
+    // 3. having K_seed, we may compute
+    // all write keys as follows:
+    // K_enc || K_dig || K_seq = PRF(K_seed, this_nonce || that_nonce || ctx_id)
+    // size of this keys depends on encoding algorithm used!
+    int write_key_size = EVP_CIPHER_key_length(profile->enc_cipher);
+    char *write_keys = malloc(write_key_size*3);
+    SC_expand_prf(EVP_sha256(), key_seed, EVP_MAX_MD_SIZE, nonce_buffer, nonce_length*2+sizeof(uint32_t), write_keys, write_key_size*3);
+    
+    memcpy(ctx->enckey,write_keys, write_key_size);
+    memcpy(ctx->mackey,write_keys+write_key_size, write_key_size);
+    memcpy(ctx->seqkey,write_keys+2*write_key_size, write_key_size);
+    
+    free(write_keys);
+    free(nonce_buffer);
+    
+    if(EVP_EncryptInit(ctx->cipher_ctx, profile->enc_cipher, (unsigned char*)ctx->enckey, NULL) != 1)
     {
         handleErrors();
         return E_FAIL;
@@ -107,6 +145,7 @@ int SC_CTX_create(SC_CTX *ctx, SC_PROFILE *profile)
         return E_FAIL;
     }
     memcpy(&ctx->profile, profile, sizeof(SC_PROFILE));
+    
     return S_OK;
 }
 
@@ -127,23 +166,51 @@ void SC_CTX_destroy(SC_CTX *ctx)
  */
 SC_SDU *SC_SDU_allocate(int sdu_type, SC_CTX *ctx, int message_length)
 {
-    SC_SDU *new_sdu = NULL;
+    SC_SDU *new_sdu = calloc(SC_SDU_expected_length(sdu_type, ctx, message_length), sizeof(uint8_t));
+    return SC_SDU_init(sdu_type, ctx, message_length, new_sdu);
+}
+
+void SC_SDU_free(SC_SDU *sdu)
+{
+    free(sdu);
+}
+
+SC_SDU *SC_SDU_init(int sdu_type, SC_CTX *ctx, int message_length, void*buffer)
+{
+    SC_SDU *new_sdu = (SC_SDU*) buffer;
     switch (sdu_type)
     {
         case SC_SDU_TYPE_PLAIN:
-            new_sdu = (SC_SDU*)calloc(message_length+sizeof(SC_SDU_HEADER), sizeof(uint8_t));
+            
             new_sdu->header.type = sdu_type;
             new_sdu->header.length = message_length;
         case SC_SDU_TYPE_SECURED:
         {
             int digest_size = EVP_MD_size(ctx->profile.mac_digest);
             int content_length = sizeof(SC_SDU_SECURED) + message_length + digest_size;
-            new_sdu = (SC_SDU*)calloc(sizeof(SC_SDU_HEADER)+content_length, sizeof(uint8_t));
+            
             new_sdu->header.type = sdu_type;
             new_sdu->header.length = content_length;
         }
     }
     return new_sdu;
+}
+
+
+int SC_SDU_expected_length(int sdu_type, SC_CTX *ctx, int message_length)
+{
+    switch (sdu_type)
+    {
+        case SC_SDU_TYPE_PLAIN:
+            return message_length+sizeof(SC_SDU_HEADER);
+        case SC_SDU_TYPE_SECURED:
+        {
+            int digest_size = EVP_MD_size(ctx->profile.mac_digest);
+            int content_length = sizeof(SC_SDU_SECURED) + message_length + digest_size;
+            return sizeof(SC_SDU_HEADER)+content_length;
+        }
+        default: return 0;
+    }
 }
 
 int SC_SDU_total_length(SC_SDU *sdu)
@@ -221,7 +288,7 @@ int SC_compute_counter(char *counter_block, int block_size, SC_CTX *ctx, SC_SDU 
             int keylen = SC_CTX_key_length(ctx);
             int nonce_length = block_size - nonce_offset;
             
-            memcpy(counter_block + nonce_offset, ctx->profile.seqkey, _MIN(keylen,nonce_length) );
+            memcpy(counter_block + nonce_offset, ctx->seqkey, _MIN(keylen,nonce_length) );
             return nonce_offset + _MIN(keylen,nonce_length);
         }
         default: return E_INVALID_BLOCK_SIZE;
@@ -245,7 +312,7 @@ void SC_SDU_compute_digest(SC_CTX *ctx, SC_SDU *sdu)
             uint32_t md_length;
             int message_length = SC_SDU_message_length(ctx,sdu);
         
-            HMAC(ctx->profile.mac_digest, ctx->profile.mackey, keylen, (uint8_t*)sdu,sdu_length-digest_size,&sdu->content.secured.fragment[message_length],&md_length);
+            HMAC(ctx->profile.mac_digest, ctx->mackey, keylen, (uint8_t*)sdu,sdu_length-digest_size,&sdu->content.secured.fragment[message_length],&md_length);
             assert(digest_size == md_length);
         }
     }
@@ -266,7 +333,7 @@ int SC_SDU_verify_digest(SC_CTX *ctx, SC_SDU *sdu)
             uint32_t md_length;
             int message_length = SC_SDU_message_length(ctx,sdu);
             
-            HMAC(ctx->profile.mac_digest, ctx->profile.mackey, keylen, (uint8_t*)sdu,sdu_length-digest_size, md_buffer, &md_length);
+            HMAC(ctx->profile.mac_digest, ctx->mackey, keylen, (uint8_t*)sdu,sdu_length-digest_size, md_buffer, &md_length);
             
             assert(digest_size == md_length);
             
@@ -322,5 +389,39 @@ int SC_encrypt(EVP_CIPHER_CTX *ctx,  char *target,  char *source,  int length,  
         target[i] = buffer[i] ^ source[i];
     }
     return length;
+}
+
+/*
+ * This function implements PRF+(key, data) used for key expansion.
+ *
+ * Parameters:
+ *  evp_md - digest algorithm used to compute PRF function
+ *  key - key part of the input
+ *  key_length - length of key
+ *  data - data part of the input
+ *  data_length - length of data part 
+ *  output - pointer to output buffer where to store generated keys
+ *  required_output_length - size of output buffer and a number of bytes that should be generated by this function
+ */
+void SC_expand_prf(const EVP_MD* evp_md, char *key, int key_length, const char *data, int data_length, char *output, int required_output_length)
+{
+    unsigned char hash[EVP_MAX_MD_SIZE];
+    unsigned int hash_length = EVP_MD_size(evp_md);
+    
+    unsigned char *buffer = malloc(data_length+sizeof(uint32_t));
+    memcpy(buffer, data, data_length);
+    
+    // encrypt counter as many times as necessary
+    for (uint32_t i = 0; i <= required_output_length / hash_length; i++)
+    {
+        (*((uint32_t*)&buffer[data_length])) = i;
+        HMAC(evp_md, key, key_length, buffer, data_length+sizeof(uint32_t), hash, &hash_length);
+        
+        int block_size = i < required_output_length / hash_length ? hash_length : required_output_length % hash_length;
+        
+        memcpy(output+(i*hash_length), hash, block_size );
+        
+    }
+    free(buffer);
 }
 

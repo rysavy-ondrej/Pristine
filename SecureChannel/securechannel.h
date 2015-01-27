@@ -31,23 +31,26 @@
 
 // LIMITS:
 #define CIPHER_NAME_MAXLEN 64
+// Defines the max length of symmetric keys, which is actually set to 512 bits
 #define KEY_MAXLEN 64
 
 
 typedef struct {
     const EVP_CIPHER *enc_cipher;
     const EVP_MD* mac_digest;
-    // encoding key
-    char enckey[KEY_MAXLEN];
-    // sequence key
-    char seqkey[KEY_MAXLEN];
-    // mac key
-    char mackey[KEY_MAXLEN];
+    char key[KEY_MAXLEN];
 } SC_PROFILE ;
 
 typedef struct _SC_CTX
 {
+    // Id of the context
+    int context_id;
     SC_PROFILE profile;
+    
+    char enckey[KEY_MAXLEN];
+    char mackey[KEY_MAXLEN];
+    char seqkey[KEY_MAXLEN];
+    
     EVP_CIPHER_CTX *cipher_ctx;
     EVP_MD_CTX *digest_ctx;
 } SC_CTX;
@@ -113,15 +116,23 @@ int SC_PROFILE_load_and_validate(char *fname, SC_PROFILE *profile);
  */
 void SC_PROFILE_print(FILE *f, SC_PROFILE *profile);
 
+
+
+
 /*
  * Creates an initial security context from a given profile.
  */
-int SC_CTX_create(SC_CTX *ctx, SC_PROFILE *profile);
+int SC_CTX_create(SC_CTX *ctx, SC_PROFILE *profile, int ctx_id, void *this_nonce, void *that_nonce, int nonce_length);
 /*
  * Removes a security context and deallocates all related resources.
  */
 void SC_CTX_destroy(SC_CTX *ctx);
 int SC_CTX_key_length(SC_CTX *ctx);
+
+/*
+ * Prints out the information about security context.
+ */
+void SC_CTX_print(FILE *f, SC_CTX *ctx);
 
 /*
  * Computes a counter block based on the provided context and information from SDU object.
@@ -136,6 +147,19 @@ int SC_encrypt(EVP_CIPHER_CTX *ctx, char *target, char *source, int length, char
  * Allocates a new SDU object for the specified SDU type and message length.
  */
 SC_SDU *SC_SDU_allocate(int sdu_type, SC_CTX *ctx, int message_length);
+/*
+ * Deallocates sdu allocated by SC_SDU_allocate function.
+ */
+void SC_SDU_free(SC_SDU *sdu);
+/*
+ * Initializes (creates) SDU header using provided buffer. It returns SC_SDU pointer to this buffer.
+ */
+SC_SDU *SC_SDU_init(int sdu_type, SC_CTX *ctx, int message_length, void*buffer);
+/* 
+ * computes expected length in bytes of SDU for the given parameters.
+ */
+int SC_SDU_expected_length(int sdu_type, SC_CTX *ctx, int message_length);
+
 
 /*
  * Computes SDU message digest using parameters from the specified context.
@@ -146,6 +170,8 @@ void SC_SDU_compute_digest(SC_CTX *ctx, SC_SDU *sdu);
  */
 int SC_SDU_verify_digest(SC_CTX *ctx, SC_SDU *sdu);
 
+
+void SC_expand_prf(const EVP_MD* evp_md, char *key, int key_length, const char *data, int data_length, char *output, int required_output_length);
 
 int SC_SDU_total_length(SC_SDU *sdu);
 int SC_SDU_message_length(SC_CTX *ctx, SC_SDU *sdu);
