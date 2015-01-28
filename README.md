@@ -38,12 +38,13 @@ Single executable file is generated calle SecureChannel. SecureChannel has follo
                   as specified by `address' (implicit value is 127.0.0.1)
 * C config-file : a name of configuration file, if not specified
                   then default file name is `sechan.cfg'
+* v : turns on debug information printed on stderr
 
 To test the communication the following parameters can be used (note that you should run nodes in separate terminals as the process ends if input is eof):
 ```
-$ ./SecureChannel -p 22222 -P 11111 -C sc-des-sha1.cfg 1> out
+$ ./SecureChannel -v -p 22222 -P 11111 -C sc-des-sha1.cfg 1> out
 
-$ ./SecureChannel -p 11111 -P 22222 -C sc-des-sha1.cfg < in
+$ ./SecureChannel -v -p 11111 -P 22222 -C sc-des-sha1.cfg < in
 
 $ diff in out
 ```
