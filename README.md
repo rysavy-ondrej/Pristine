@@ -13,10 +13,17 @@ The idea is to use libcrypto from OpenSSL Project to implement secure channel th
 
 ### Requirements
 This project requires OpenSSL development package to be installed on a host system. 
-
+#### Linux
+For Linux (Ubuntu) this means to execute:
 ```
 $sudo apt-get install libssl-dev
 ```
+This install development package, which means that it includes header files and static library files that 
+are necessary for development. After installing libssl-dev, all header files and library file should be in gcc path and Makefile.Linux can be used to compile the project.
+#### Mac OS X
+Mac OS X has installed OpenSSL in a development edition but all functions are marked as deprecated as Mac OS X uses different library than OpenSSL. To overcome this, project comes with necessary files from OpenSSL. These are located in Package folder.
+#### Windows
+Windows is currently not supported.
 
 ### Compilation
 To compile the project run make specifying which makefile to use. There are different makefiles depending target operating system:
