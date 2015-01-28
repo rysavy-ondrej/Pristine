@@ -8,7 +8,7 @@
 
 #ifndef SecureChannel_securechannel_h
 #define SecureChannel_securechannel_h
-
+#include <stdint.h>
 #include <openssl/bio.h>
 #include <openssl/conf.h>
 #include <openssl/evp.h>

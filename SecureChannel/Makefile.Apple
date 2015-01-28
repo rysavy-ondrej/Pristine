@@ -25,7 +25,7 @@ EXECUTABLES=SecureChannel udtproxy
 all: ${SOURCES} ${EXECUTABLES}
 	
 SecureChannel:  $(OBJECTS)
-	${CC} ${LDFLAGS} -o SecureChannel SecureChannel.o main.o
+	${CC} ${LDFLAGS} -o SecureChannel securechannel.o main.o
 
 udtproxy:  $(OBJECTS) 
 	${CC} ${LDFLAGS} -o udtproxy udtproxy.o
