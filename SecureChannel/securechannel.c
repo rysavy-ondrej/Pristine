@@ -266,8 +266,6 @@ int SC_compute_counter(char *counter_block, int block_size, SC_CTX *ctx, SC_SDU 
     {
         case 8: // EPO and NONCE is not used for this length and SEQ is truncated to 32bits
         {
-            fprintf(stderr, "block size=8\n");
-            
             // four bytes are reserved for sub-counter
             memset(counter_block, 0, SUBCOUNTER_LENGTH);
             

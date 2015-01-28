@@ -48,12 +48,13 @@ void fprint_timestamp(FILE *f)
     fprintf(f,"%s \n", timeString);
 }
 
+FILE *debug_file;
 
 int main(int argc, char **argv ) {
     
     char configFilename[FILENAME_MAX];
     strcpy(configFilename,"sechan.cfg");
-    
+    debug_file = fopen("/dev/null", "w");   // implicitly, no debug.
     flow_info_t flow_info;
     flow_info.remote_address = htonl(0x7f000001);   // set to 127.0.0.1
     flow_info.remote_port = 0;
@@ -61,7 +62,7 @@ int main(int argc, char **argv ) {
     
 
     char ch;
-    while ((ch = getopt(argc,argv,"p:R:P:C:h")) != -1) {
+    while ((ch = getopt(argc,argv,"p:R:P:C:h:v")) != -1) {
         switch(ch) {
             case 'p':
                 flow_info.local_port = htons(atol(optarg));
@@ -71,6 +72,9 @@ int main(int argc, char **argv ) {
                 break;
             case 'P':
                 flow_info.remote_port = htons(atol(optarg));
+                break;
+            case 'v':
+                debug_file = stderr;
                 break;
             case 'C':
                 strcpy(configFilename, optarg);
@@ -111,29 +115,29 @@ int main(int argc, char **argv ) {
         exit(EXIT_FAILURE);
     }
     //fprintf(stderr, "sizeof(SC_SDU_SECURED)=%d, sizeof(SC_SDU_HEADER)=%d, sizeof(SC_SDU)=%d, sizeof(SC_SDU_PLAIN)=%d\n", sizeof(SC_SDU_SECURED),sizeof(SC_SDU_HEADER),sizeof(SC_SDU),sizeof(SC_SDU_PLAIN));
-    fprintf(stderr, "-- SECURE CHANNEL INFO --------------------------------------------------\n");
-    fprintf(stderr, "Active profile:\n");
-    SC_PROFILE_print(stderr, &profile);
+    fprintf(debug_file, "-- SECURE CHANNEL INFO --------------------------------------------------\n");
+    fprintf(debug_file, "Active profile:\n");
+    SC_PROFILE_print(debug_file, &profile);
     
     SC_CTX sending_ctx;
     SC_CTX receiving_ctx;
    
     SC_CTX_create(&sending_ctx,&profile,0, &flow_info.local_port, &flow_info.remote_port, sizeof(in_port_t));
     SC_CTX_create(&receiving_ctx,&profile,0,&flow_info.remote_port, &flow_info.local_port, sizeof(in_port_t));
-    fprintf(stderr, "-------------------------------------------------------------------------\n");
-    fprintf(stderr, "Write context:\n");
-    SC_CTX_print(stderr, &sending_ctx);
-    fprintf(stderr, "-------------------------------------------------------------------------\n");
-    fprintf(stderr, "Read context:\n");
-    SC_CTX_print(stderr, &receiving_ctx);
+    fprintf(debug_file, "-------------------------------------------------------------------------\n");
+    fprintf(debug_file, "Write context:\n");
+    SC_CTX_print(debug_file, &sending_ctx);
+    fprintf(debug_file, "-------------------------------------------------------------------------\n");
+    fprintf(debug_file, "Read context:\n");
+    SC_CTX_print(debug_file, &receiving_ctx);
     
     int udt = udt_init(flow_info.local_port);
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
     
     char buffer[80];
-    fprintf(stderr, "-------------------------------------------------------------------------\n");
-    fprintf(stderr, "Data channel from localhost:%d to %s:%d.\n", ntohs(flow_info.local_port), inet_ntop(AF_INET, &flow_info.remote_address, buffer, 80), ntohs(flow_info.remote_port));
-    fprintf(stderr, "=========================================================================\n");
+    fprintf(debug_file, "-------------------------------------------------------------------------\n");
+    fprintf(debug_file, "Data channel from localhost:%d to %s:%d.\n", ntohs(flow_info.local_port), inet_ntop(AF_INET, &flow_info.remote_address, buffer, 80), ntohs(flow_info.remote_port));
+    fprintf(debug_file, "=========================================================================\n");
     fd_set readfds;
     FD_ZERO(&readfds);
     FD_SET(udt, &readfds);
@@ -151,9 +155,9 @@ int main(int argc, char **argv ) {
                 int block_size = EVP_CIPHER_CTX_block_size(sending_ctx.cipher_ctx);
                 int data_length= strlen((char*)inputdata);
                 
-                fprintf(stderr,"\n");fprint_timestamp(stderr);
-                fprintf(stderr, "New message (length=%d):\n",data_length);
-                BIO_dump_fp(stderr, inputdata, data_length);
+                fprintf(debug_file,"\n");fprint_timestamp(debug_file);
+                fprintf(debug_file, "New message (length=%d):\n",data_length);
+                BIO_dump_fp(debug_file, inputdata, data_length);
                 
                 SC_SDU *sdu = SC_SDU_allocate(SC_SDU_TYPE_SECURED, &sending_ctx, data_length);
                 sdu->content.secured.sequence_number = sdu_counter;
@@ -164,9 +168,9 @@ int main(int argc, char **argv ) {
                 SC_encrypt(sending_ctx.cipher_ctx, (char *)sdu->content.secured.fragment, inputdata, data_length, counter_block);
                 SC_SDU_compute_digest(&sending_ctx, sdu);
                 
-                fprintf(stderr,"SDU (total size=%d):\n", SC_SDU_total_length(sdu));
-                SC_SDU_dump_fp(stdout, &sending_ctx, sdu);
-                fprintf(stderr, "\n");
+                fprintf(debug_file,"SDU (total size=%d):\n", SC_SDU_total_length(sdu));
+                SC_SDU_dump_fp(debug_file, &sending_ctx, sdu);
+                fprintf(debug_file, "\n");
                 
                 if (!udt_send(udt, flow_info.remote_address, flow_info.remote_port, (char*)sdu, SC_SDU_total_length(sdu)))
                 {
@@ -184,15 +188,15 @@ int main(int argc, char **argv ) {
             if (recv_len > 0)
             {
                 SC_SDU *sdu = (SC_SDU*)inputdata;
-                fprintf(stderr,"\n");fprint_timestamp(stderr);
-                fprintf(stderr,"Received SDU (total size=%d):\n",SC_SDU_total_length(sdu));
-                SC_SDU_dump_fp(stderr, &sending_ctx, sdu);
+                fprintf(debug_file,"\n");fprint_timestamp(debug_file);
+                fprintf(debug_file,"Received SDU (total size=%d):\n",SC_SDU_total_length(sdu));
+                SC_SDU_dump_fp(debug_file, &sending_ctx, sdu);
             
                 // verify MAC of the message...
                 int sdu_correct = SC_SDU_verify_digest(&receiving_ctx, sdu);
                 if (sdu_correct ==  TRUE)
                 {
-                    fprintf(stderr,"Integrity check: OK.\n");
+                    fprintf(debug_file,"Integrity check: OK.\n");
                     
                     int message_length = SC_SDU_message_length(&receiving_ctx, sdu);
                     int block_size = EVP_CIPHER_CTX_block_size(receiving_ctx.cipher_ctx);
@@ -200,9 +204,9 @@ int main(int argc, char **argv ) {
                     SC_compute_counter(counter_block, block_size, &receiving_ctx, sdu);
                     SC_encrypt(receiving_ctx.cipher_ctx, message, (char *)sdu->content.secured.fragment, message_length, counter_block);
                     
-                    fprintf(stderr, "Decoded message (length=%d):\n",message_length);
-                    BIO_dump_fp(stderr, message, message_length);
-                    fprintf(stderr, "\n");
+                    fprintf(debug_file, "Decoded message (length=%d):\n",message_length);
+                    BIO_dump_fp(debug_file, message, message_length);
+                    fprintf(debug_file, "\n");
                     
                     /* Add a NULL terminator. We are expecting printable text */
                     message[message_length] = '\0';
@@ -211,7 +215,7 @@ int main(int argc, char **argv ) {
                 }
                 else
                 {
-                    fprintf(stderr,"Integrity check: Failed.\nMessage dropped.\n");
+                    fprintf(debug_file,"Integrity check: Failed.\nMessage dropped.\n");
                 }
             }
         }
