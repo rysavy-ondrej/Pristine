@@ -12,7 +12,11 @@ The idea is to use libcrypto from OpenSSL Project to implement secure channel th
 
 
 ### Requirements
-This project requires OpenSSL distribution to be installed on a host system. 
+This project requires OpenSSL development package to be installed on a host system. 
+
+```
+$sudo apt-get install libssl-dev
+```
 
 ### Compilation
 To compile the project run make specifying which makefile to use. There are different makefiles depending target operating system:
