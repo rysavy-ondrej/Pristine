@@ -50,6 +50,13 @@ void fprint_timestamp(FILE *f)
 
 FILE *debug_file;
 
+/*
+ * Define size of receiving SC_CTX pool. Receiving SC_CTX is used 
+ * to decode incoming SDU. Each SDU has CTX index which determines
+ * which SC_CTX to use.
+ */
+#define SC_CTX_POOL_SIZE 16
+
 int main(int argc, char **argv ) {
     
     char configFilename[FILENAME_MAX];
@@ -120,16 +127,15 @@ int main(int argc, char **argv ) {
     SC_PROFILE_print(debug_file, &profile);
     
     SC_CTX sending_ctx;
-    SC_CTX receiving_ctx;
+    SC_CTX receiving_ctx_pool[SC_CTX_POOL_SIZE];
+    memset(receiving_ctx_pool, 0, sizeof(SC_CTX)*SC_CTX_POOL_SIZE);
    
     SC_CTX_create(&sending_ctx,&profile,0, &flow_info.local_port, &flow_info.remote_port, sizeof(in_port_t));
-    SC_CTX_create(&receiving_ctx,&profile,0,&flow_info.remote_port, &flow_info.local_port, sizeof(in_port_t));
+    SC_CTX_create(&receiving_ctx_pool[0],&profile,0,&flow_info.remote_port, &flow_info.local_port, sizeof(in_port_t));
+    
     fprintf(debug_file, "-------------------------------------------------------------------------\n");
     fprintf(debug_file, "Write context:\n");
     SC_CTX_print(debug_file, &sending_ctx);
-    fprintf(debug_file, "-------------------------------------------------------------------------\n");
-    fprintf(debug_file, "Read context:\n");
-    SC_CTX_print(debug_file, &receiving_ctx);
     
     int udt = udt_init(flow_info.local_port);
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
@@ -147,6 +153,7 @@ int main(int argc, char **argv ) {
     
     char inputdata[MAXLINE];
     while (select(udt+1, &readfds, NULL, NULL, NULL)) {
+        // SENDER:
         if (FD_ISSET(STDIN_FILENO, &readfds))
         {
             memset(inputdata, 0, MAXLINE);
@@ -154,6 +161,15 @@ int main(int argc, char **argv ) {
             {
                 int block_size = EVP_CIPHER_CTX_block_size(sending_ctx.cipher_ctx);
                 int data_length= strlen((char*)inputdata);
+                uint64_t byte_limit = SC_CTX_bytes_limit(&sending_ctx);
+                
+                if (sending_ctx.bytes + data_length > byte_limit)
+                {
+                    int ctx_index = sending_ctx.context_id;
+                    SC_CTX_destroy(&sending_ctx);
+                    SC_CTX_create(&sending_ctx,&profile,ctx_index+1, &flow_info.local_port, &flow_info.remote_port, sizeof(in_port_t));
+                    sdu_counter = 0;
+                }
                 
                 fprintf(debug_file,"\n");fprint_timestamp(debug_file);
                 fprintf(debug_file, "New message (length=%d):\n",data_length);
@@ -161,12 +177,14 @@ int main(int argc, char **argv ) {
                 
                 SC_SDU *sdu = SC_SDU_allocate(SC_SDU_TYPE_SECURED, &sending_ctx, data_length);
                 sdu->content.secured.sequence_number = sdu_counter;
-                sdu->content.secured.context_index = 0;
+                sdu->content.secured.context_index = sending_ctx.context_id;
             
                 char counter_block [block_size];
                 SC_compute_counter(counter_block, block_size, &sending_ctx, sdu);
                 SC_encrypt(sending_ctx.cipher_ctx, (char *)sdu->content.secured.fragment, inputdata, data_length, counter_block);
                 SC_SDU_compute_digest(&sending_ctx, sdu);
+                
+                sending_ctx.bytes += data_length;
                 
                 fprintf(debug_file,"SDU (total size=%d):\n", SC_SDU_total_length(sdu));
                 SC_SDU_dump_fp(debug_file, &sending_ctx, sdu);
@@ -181,6 +199,7 @@ int main(int argc, char **argv ) {
             }
             if (feof(stdin)) break;
         }
+        // RECEIVER:
         if (FD_ISSET(udt, &readfds)) {
             memset(inputdata, 0, MAXLINE);
             char message[MAXLINE];
@@ -188,21 +207,30 @@ int main(int argc, char **argv ) {
             if (recv_len > 0)
             {
                 SC_SDU *sdu = (SC_SDU*)inputdata;
-                fprintf(debug_file,"\n");fprint_timestamp(debug_file);
+                
+                int context_index = sdu->content.secured.context_index;
+                SC_CTX *receiving_ctx = &receiving_ctx_pool[context_index%SC_CTX_POOL_SIZE];
+                if (receiving_ctx->context_id != context_index)
+                {
+                    if (receiving_ctx->context_id != 0) SC_CTX_destroy(receiving_ctx);
+                    SC_CTX_create(receiving_ctx,&profile,context_index,&flow_info.remote_port, &flow_info.local_port, sizeof(in_port_t));
+                }
+                
+                fprintf(debug_file,"\n");  fprint_timestamp(debug_file);
                 fprintf(debug_file,"Received SDU (total size=%d):\n",SC_SDU_total_length(sdu));
-                SC_SDU_dump_fp(debug_file, &sending_ctx, sdu);
+                SC_SDU_dump_fp(debug_file, receiving_ctx, sdu);
             
                 // verify MAC of the message...
-                int sdu_correct = SC_SDU_verify_digest(&receiving_ctx, sdu);
+                int sdu_correct = SC_SDU_verify_digest(receiving_ctx, sdu);
                 if (sdu_correct ==  TRUE)
                 {
                     fprintf(debug_file,"Integrity check: OK.\n");
                     
-                    int message_length = SC_SDU_message_length(&receiving_ctx, sdu);
-                    int block_size = EVP_CIPHER_CTX_block_size(receiving_ctx.cipher_ctx);
+                    int message_length = SC_SDU_message_length(receiving_ctx, sdu);
+                    int block_size = EVP_CIPHER_CTX_block_size(receiving_ctx->cipher_ctx);
                     char counter_block [block_size];
-                    SC_compute_counter(counter_block, block_size, &receiving_ctx, sdu);
-                    SC_encrypt(receiving_ctx.cipher_ctx, message, (char *)sdu->content.secured.fragment, message_length, counter_block);
+                    SC_compute_counter(counter_block, block_size, receiving_ctx, sdu);
+                    SC_encrypt(receiving_ctx->cipher_ctx, message, (char *)sdu->content.secured.fragment, message_length, counter_block);
                     
                     fprintf(debug_file, "Decoded message (length=%d):\n",message_length);
                     BIO_dump_fp(debug_file, message, message_length);
@@ -225,7 +253,11 @@ int main(int argc, char **argv ) {
     }
     
     SC_CTX_destroy(&sending_ctx);
-    SC_CTX_destroy(&receiving_ctx);
-        
+    for(int i =0;i<SC_CTX_POOL_SIZE; i++)
+    {
+        SC_CTX *receiving_ctx = &receiving_ctx_pool[i];
+        if (receiving_ctx->context_id != 0)
+            SC_CTX_destroy(receiving_ctx);
+    }
     return EXIT_SUCCESS;
 }

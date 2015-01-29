@@ -19,7 +19,7 @@
 #include "securechannel.h"
 
 #define _MIN(x, y) (((x) < (y)) ? (x) : (y))
-
+#define _MAX(x, y) (((x) > (y)) ? (x) : (y))
 
 int SC_initialize()
 {
@@ -51,12 +51,21 @@ int SC_PROFILE_load_and_validate(char *fname, SC_PROFILE *profile)
         fclose(f);
         return E_CANNOT_PARSE_PROFILE;
     }
-
+    int block_limit = 0;
+    int key_lifetime = 0;
+    // optionally load max and exp values
+    fscanf(f,"\n");
+    fscanf(f,"max:%d", &block_limit);
+    fscanf(f,"\n");
+    fscanf(f,"exp:%d", &key_lifetime);
     fclose (f);
     profile->enc_cipher = EVP_get_cipherbyname(cipher_name);
     profile->mac_digest = EVP_get_digestbyname(digest_name);
+    profile->key_lifetime = key_lifetime;
+    profile->block_limit = block_limit;
     if (profile->enc_cipher == NULL) return E_CANNOT_FIND_CIPHER;
     if (profile->mac_digest == NULL) return E_CANNOT_FIND_MD;
+    
     return S_OK;
 }
 
@@ -66,18 +75,28 @@ void SC_PROFILE_print(FILE *f, SC_PROFILE *profile)
     fprintf(f, "enc:%s (keylen=%d, block size=%d)\n", EVP_CIPHER_name(profile->enc_cipher), EVP_CIPHER_key_length(profile->enc_cipher), EVP_CIPHER_block_size(profile->enc_cipher));
     fprintf(f, "mac:%s (len=%d)\n", EVP_MD_name(profile->mac_digest), EVP_MD_size(profile->mac_digest));
     fprintf(f, "key:%s\n", profile->key);
+    fprintf(f, "max:%d blocks\n", profile->block_limit);
+    fprintf(f, "exp:%d seconds\n", profile->key_lifetime);
 }
 
 void SC_CTX_print(FILE *f, SC_CTX *ctx)
 {
     int key_len =SC_CTX_key_length(ctx);
-    fprintf(f, "sci:%d\n", ctx->context_id);
+    char time_string[64];
+    struct tm * time_info;
+    time_info = localtime(&ctx->created);
+    strftime(time_string, sizeof(time_string), "%Y-%m-%d %H:%M:%S", time_info);
+
+    
+    fprintf(f, "sci:%d, created on:%s\n", ctx->context_id,time_string);
     fprintf(f, "enckey:\n");
     BIO_dump_fp(f, ctx->enckey, key_len);
     fprintf(f, "mackey:\n");
     BIO_dump_fp(f, ctx->mackey, key_len);
     fprintf(f, "seqkey:\n");
     BIO_dump_fp(f, ctx->seqkey, key_len);
+    fprintf(f, "bytes:%llu\n",ctx->bytes);
+    fprintf(f, "blocks:%llu\n",ctx->blocks);
 }
 
 void handleErrors(void)
@@ -96,6 +115,7 @@ int SC_CTX_key_length(SC_CTX *ctx)
 
 int SC_CTX_create(SC_CTX *ctx, SC_PROFILE *profile, int ctx_id, void *this_nonce, void *that_nonce, int nonce_length)
 {
+    memset(ctx,0, sizeof(SC_CTX));
     if(!(ctx->cipher_ctx = EVP_CIPHER_CTX_new()))
     {
         handleErrors();
@@ -106,6 +126,9 @@ int SC_CTX_create(SC_CTX *ctx, SC_PROFILE *profile, int ctx_id, void *this_nonce
         handleErrors();
         return E_FAIL;
     }
+    ctx->context_id = ctx_id;
+    
+    time(&ctx->created);
     
     // compute keys from master key:
     // 1. compute seed key: K_seed = PRF(this_nonce || that_nonce, K_master)
@@ -154,6 +177,33 @@ void SC_CTX_destroy(SC_CTX *ctx)
 {
     EVP_CIPHER_CTX_free(ctx->cipher_ctx);
     EVP_MD_CTX_destroy(ctx->digest_ctx);
+}
+
+/*
+ * Gets the number of bytes that can be encrypted by a single write key.
+ * Hard limit is 2^{n/2} blocks, where n is a block size in bits.
+ */
+uint64_t SC_CTX_bytes_limit(SC_CTX *ctx)
+{
+    /* The limit depends on the mode and the size of blocks:
+     
+      Consider DES using a block size of 64 bits (8 bytes):
+      The Birthday paradox tells us that after accumulating a number of blocks equal to the square root
+      of the total number possible, there will be an approximately 50% chance of two or more being the same, 
+      which would start to leak information about the message contents. Thus even when used with a proper 
+      encryption mode (e.g. CBC or OFB), only 2^32 x 8 B = 32 GB of data can be safely sent under one key.
+      
+      For counter mode, the limit corresponds to the size of the counter, which equals to block_size.
+     
+      However, here we set the limit to much lower value, which equals to UINT32_MAX blocks. This is 
+      safe for most of encryption algorithms and offers quite a lot of data that can be encrypted without 
+      the necessity to refresh write keys.
+     */
+    uint64_t block_size = EVP_CIPHER_block_size(ctx->profile.enc_cipher);
+    uint64_t computed_limit = UINT32_MAX;
+
+    uint64_t max_blocks = ctx->profile.block_limit !=0 ? _MIN(ctx->profile.block_limit, computed_limit) : computed_limit;
+    return (max_blocks * block_size);
 }
 
 /*

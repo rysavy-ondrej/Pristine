@@ -39,20 +39,34 @@ typedef struct {
     const EVP_CIPHER *enc_cipher;
     const EVP_MD* mac_digest;
     char key[KEY_MAXLEN];
+    // Lifetime of write keys in seconds.
+    uint32_t key_lifetime;
+    // Maximum number of block to be encoded with a single write key.
+    uint32_t block_limit;
 } SC_PROFILE ;
 
 typedef struct _SC_CTX
 {
     // Id of the context
     int context_id;
+    // Profile from which this context were generated.
     SC_PROFILE profile;
-    
+    // Encryption key.
     char enckey[KEY_MAXLEN];
+    // Digest message key.
     char mackey[KEY_MAXLEN];
+    // Sequence key.
     char seqkey[KEY_MAXLEN];
-    
+    // Cipher context.
     EVP_CIPHER_CTX *cipher_ctx;
+    // Digest context.
     EVP_MD_CTX *digest_ctx;
+    // Number of bytes processed by this context.
+    uint64_t bytes;
+    // Number of block processed by this context.
+    uint64_t blocks;
+    // time when this context was created
+    time_t created;
 } SC_CTX;
 
 
@@ -133,6 +147,12 @@ int SC_CTX_key_length(SC_CTX *ctx);
  * Prints out the information about security context.
  */
 void SC_CTX_print(FILE *f, SC_CTX *ctx);
+
+/*
+ * Gets the limit on number of bytes that can be securely computed
+ * using a single key.
+ */
+uint64_t SC_CTX_bytes_limit(SC_CTX *ctx);
 
 /*
  * Computes a counter block based on the provided context and information from SDU object.
