@@ -55,10 +55,14 @@ Configuration file has the following format:
 enc:<name of cipher for encoding including key size and mode>
 mac:<name of cipher to generate message digest>
 key:<master key used to generate write keys>
+max:<maximum amount of data in blocks to be encrypted by a single key>
+exp:<lifetime of write keys in seconds>
 ```
 For example, example configuration file sc-aes-md5.cfg contains following:
 ```
 enc:aes-256-ecb
 mac:md5
 key:01234567890123456789012345678901
+max:1024
+exp:3600
 ```
