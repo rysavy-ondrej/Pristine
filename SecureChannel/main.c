@@ -55,7 +55,7 @@ FILE *debug_file;
  * to decode incoming SDU. Each SDU has CTX index which determines
  * which SC_CTX to use.
  */
-#define SC_CTX_POOL_SIZE 16
+#define SC_CTX_POOL_SIZE 4
 
 int main(int argc, char **argv ) {
     
